@@ -35,6 +35,8 @@ typedef struct insp_mi_data insp_mi_data;
 
 struct insp_mi_data {
   insp_mv mv[2];
+  // videoparser: Motion vector difference (coded delta)
+  insp_mv mvd[2];
   int16_t ref_frame[2];
   int16_t mode;
   int16_t uv_mode;
@@ -79,6 +81,9 @@ struct insp_frame_data {
   int delta_q_present_flag;
   int delta_q_res;
   int show_existing_frame;
+  // videoparser: Bit counts for motion and coefficient decoding
+  uint64_t motion_bits;
+  uint64_t coef_bits;
 };
 
 void ifd_init(insp_frame_data *fd, int frame_width, int frame_height);

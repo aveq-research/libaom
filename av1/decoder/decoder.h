@@ -129,6 +129,10 @@ typedef struct ThreadData {
   decode_block_visitor_fn_t inverse_tx_inter_block_visit;
   predict_inter_block_visitor_fn_t predict_inter_block_visit;
   cfl_store_inter_block_visitor_fn_t cfl_store_inter_block_visit;
+#if CONFIG_INSPECTION
+  // videoparser: Bit count accumulator for coefficient decoding
+  uint64_t coef_bits;
+#endif
 } ThreadData;
 
 typedef struct AV1DecRowMTJobInfo {
@@ -309,6 +313,9 @@ typedef struct AV1Decoder {
 #if CONFIG_INSPECTION
   aom_inspect_cb inspect_cb;
   void *inspect_ctx;
+  // videoparser: Bit count accumulators for motion and coefficient decoding
+  uint64_t motion_bits;
+  uint64_t coef_bits;
 #endif
   int operating_point;
   int current_operating_point;

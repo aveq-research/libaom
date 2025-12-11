@@ -242,6 +242,10 @@ typedef struct MB_MODE_INFO {
   /**@{*/
   /*! \brief The motion vectors used by the current inter mode */
   int_mv mv[2];
+#if CONFIG_INSPECTION
+  // videoparser: Store motion vector difference (coded delta) for extraction
+  int_mv mvd[2];
+#endif
   /*! \brief The reference frames for the MV */
   MV_REFERENCE_FRAME ref_frame[2];
   /*! \brief Filter used in subpel interpolation. */

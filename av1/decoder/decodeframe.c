@@ -299,8 +299,16 @@ static inline void decode_reconstruct_tx(AV1_COMMON *cm, ThreadData *const td,
   if (blk_row >= max_blocks_high || blk_col >= max_blocks_wide) return;
 
   if (tx_size == plane_tx_size || plane) {
+#if CONFIG_INSPECTION
+    // videoparser: Track bits before coefficient decoding
+    const uint32_t coef_bits_before = aom_reader_tell_frac(r);
+#endif
     td->read_coeffs_tx_inter_block_visit(cm, dcb, r, plane, blk_row, blk_col,
                                          tx_size);
+#if CONFIG_INSPECTION
+    // videoparser: Accumulate coefficient bits (in 1/8th bits)
+    td->coef_bits += (aom_reader_tell_frac(r) - coef_bits_before);
+#endif
 
     td->inverse_tx_inter_block_visit(cm, dcb, r, plane, blk_row, blk_col,
                                      tx_size);
@@ -938,8 +946,16 @@ static inline void decode_token_recon_block(AV1Decoder *const pbi,
                blk_row += stepr) {
             for (int blk_col = col >> pd->subsampling_x; blk_col < unit_width;
                  blk_col += stepc) {
+#if CONFIG_INSPECTION
+              // videoparser: Track bits before intra coefficient decoding
+              const uint32_t coef_bits_before = aom_reader_tell_frac(r);
+#endif
               td->read_coeffs_tx_intra_block_visit(cm, dcb, r, plane, blk_row,
                                                    blk_col, tx_size);
+#if CONFIG_INSPECTION
+              // videoparser: Accumulate coefficient bits (in 1/8th bits)
+              td->coef_bits += (aom_reader_tell_frac(r) - coef_bits_before);
+#endif
               td->predict_and_recon_intra_block_visit(
                   cm, dcb, r, plane, blk_row, blk_col, tx_size);
               set_cb_buffer_offsets(dcb, tx_size, plane);
@@ -5190,6 +5206,12 @@ uint32_t av1_decode_frame_headers_and_setup(AV1Decoder *pbi,
 #endif
 #if CONFIG_MISMATCH_DEBUG
   mismatch_move_frame_idx_r();
+#endif
+
+#if CONFIG_INSPECTION
+  // videoparser: Reset bit counters at start of frame decode
+  pbi->motion_bits = 0;
+  pbi->td.coef_bits = 0;
 #endif
 
   for (int i = LAST_FRAME; i <= ALTREF_FRAME; ++i) {

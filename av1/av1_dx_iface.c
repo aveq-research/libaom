@@ -548,6 +548,12 @@ static aom_codec_err_t decode_one(aom_codec_alg_priv_t *ctx,
 
   frame_worker_data->pbi->is_annexb = ctx->is_annexb;
 
+#if CONFIG_INSPECTION
+  // videoparser: Also propagate inspection callback in decode_one path
+  frame_worker_data->pbi->inspect_cb = ctx->inspect_cb;
+  frame_worker_data->pbi->inspect_ctx = ctx->inspect_ctx;
+#endif
+
   worker->had_error = 0;
   winterface->execute(worker);
 

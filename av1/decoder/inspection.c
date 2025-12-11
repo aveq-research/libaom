@@ -88,6 +88,11 @@ int ifd_inspect(insp_frame_data *fd, void *decoder, int skip_not_transform) {
       mi->mv[0].col = mbmi->mv[0].as_mv.col;
       mi->mv[1].row = mbmi->mv[1].as_mv.row;
       mi->mv[1].col = mbmi->mv[1].as_mv.col;
+      // videoparser: Motion Vector Differences
+      mi->mvd[0].row = mbmi->mvd[0].as_mv.row;
+      mi->mvd[0].col = mbmi->mvd[0].as_mv.col;
+      mi->mvd[1].row = mbmi->mvd[1].as_mv.row;
+      mi->mvd[1].col = mbmi->mvd[1].as_mv.col;
       // Reference Frames
       mi->ref_frame[0] = mbmi->ref_frame[0];
       mi->ref_frame[1] = mbmi->ref_frame[1];
@@ -158,5 +163,8 @@ int ifd_inspect(insp_frame_data *fd, void *decoder, int skip_not_transform) {
       mi->current_qindex = mbmi->current_qindex;
     }
   }
+  // videoparser: Copy bit counts (stored in 1/8th bits, convert to bits)
+  fd->motion_bits = pbi->motion_bits / 8;
+  fd->coef_bits = pbi->td.coef_bits / 8;
   return 1;
 }

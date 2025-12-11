@@ -27,7 +27,9 @@
 #include "av1/decoder/decodemv.h"
 
 #include "aom_dsp/aom_dsp_common.h"
+#include "aom_dsp/bitreader.h"  // videoparser: for aom_reader_tell_frac
 #include "aom_ports/bitops.h"
+#include "config/aom_config.h"  // videoparser: for CONFIG_INSPECTION
 
 #define ACCT_STR __func__
 
@@ -1128,14 +1130,30 @@ static inline int assign_mv(AV1_COMMON *cm, MACROBLOCKD *xd,
     case NEWMV: {
       nmv_context *const nmvc = &ec_ctx->nmvc;
       read_mv(r, &mv[0].as_mv, &ref_mv[0].as_mv, nmvc, allow_hp);
+#if CONFIG_INSPECTION
+      // videoparser: Store MVD (motion vector difference)
+      mbmi->mvd[0].as_mv.row = mv[0].as_mv.row - ref_mv[0].as_mv.row;
+      mbmi->mvd[0].as_mv.col = mv[0].as_mv.col - ref_mv[0].as_mv.col;
+      mbmi->mvd[1].as_int = 0;
+#endif
       break;
     }
     case NEARESTMV: {
       mv[0].as_int = nearest_mv[0].as_int;
+#if CONFIG_INSPECTION
+      // videoparser: No MVD for NEARESTMV
+      mbmi->mvd[0].as_int = 0;
+      mbmi->mvd[1].as_int = 0;
+#endif
       break;
     }
     case NEARMV: {
       mv[0].as_int = near_mv[0].as_int;
+#if CONFIG_INSPECTION
+      // videoparser: No MVD for NEARMV
+      mbmi->mvd[0].as_int = 0;
+      mbmi->mvd[1].as_int = 0;
+#endif
       break;
     }
     case GLOBALMV: {
@@ -1144,6 +1162,11 @@ static inline int assign_mv(AV1_COMMON *cm, MACROBLOCKD *xd,
                                           bsize, xd->mi_col, xd->mi_row,
                                           features->cur_frame_force_integer_mv)
                          .as_int;
+#if CONFIG_INSPECTION
+      // videoparser: No MVD for GLOBALMV
+      mbmi->mvd[0].as_int = 0;
+      mbmi->mvd[1].as_int = 0;
+#endif
       break;
     }
     case NEW_NEWMV: {
@@ -1151,6 +1174,11 @@ static inline int assign_mv(AV1_COMMON *cm, MACROBLOCKD *xd,
       for (int i = 0; i < 2; ++i) {
         nmv_context *const nmvc = &ec_ctx->nmvc;
         read_mv(r, &mv[i].as_mv, &ref_mv[i].as_mv, nmvc, allow_hp);
+#if CONFIG_INSPECTION
+        // videoparser: Store MVD for both references
+        mbmi->mvd[i].as_mv.row = mv[i].as_mv.row - ref_mv[i].as_mv.row;
+        mbmi->mvd[i].as_mv.col = mv[i].as_mv.col - ref_mv[i].as_mv.col;
+#endif
       }
       break;
     }
@@ -1158,17 +1186,33 @@ static inline int assign_mv(AV1_COMMON *cm, MACROBLOCKD *xd,
       assert(is_compound);
       mv[0].as_int = nearest_mv[0].as_int;
       mv[1].as_int = nearest_mv[1].as_int;
+#if CONFIG_INSPECTION
+      // videoparser: No MVD for NEAREST_NEARESTMV
+      mbmi->mvd[0].as_int = 0;
+      mbmi->mvd[1].as_int = 0;
+#endif
       break;
     }
     case NEAR_NEARMV: {
       assert(is_compound);
       mv[0].as_int = near_mv[0].as_int;
       mv[1].as_int = near_mv[1].as_int;
+#if CONFIG_INSPECTION
+      // videoparser: No MVD for NEAR_NEARMV
+      mbmi->mvd[0].as_int = 0;
+      mbmi->mvd[1].as_int = 0;
+#endif
       break;
     }
     case NEW_NEARESTMV: {
       nmv_context *const nmvc = &ec_ctx->nmvc;
       read_mv(r, &mv[0].as_mv, &ref_mv[0].as_mv, nmvc, allow_hp);
+#if CONFIG_INSPECTION
+      // videoparser: Store MVD for ref 0 (NEWMV), zero for ref 1 (NEARESTMV)
+      mbmi->mvd[0].as_mv.row = mv[0].as_mv.row - ref_mv[0].as_mv.row;
+      mbmi->mvd[0].as_mv.col = mv[0].as_mv.col - ref_mv[0].as_mv.col;
+      mbmi->mvd[1].as_int = 0;
+#endif
       assert(is_compound);
       mv[1].as_int = nearest_mv[1].as_int;
       break;
@@ -1177,6 +1221,12 @@ static inline int assign_mv(AV1_COMMON *cm, MACROBLOCKD *xd,
       nmv_context *const nmvc = &ec_ctx->nmvc;
       mv[0].as_int = nearest_mv[0].as_int;
       read_mv(r, &mv[1].as_mv, &ref_mv[1].as_mv, nmvc, allow_hp);
+#if CONFIG_INSPECTION
+      // videoparser: Store MVD for ref 1 (NEWMV), zero for ref 0 (NEARESTMV)
+      mbmi->mvd[0].as_int = 0;
+      mbmi->mvd[1].as_mv.row = mv[1].as_mv.row - ref_mv[1].as_mv.row;
+      mbmi->mvd[1].as_mv.col = mv[1].as_mv.col - ref_mv[1].as_mv.col;
+#endif
       assert(is_compound);
       break;
     }
@@ -1184,12 +1234,24 @@ static inline int assign_mv(AV1_COMMON *cm, MACROBLOCKD *xd,
       nmv_context *const nmvc = &ec_ctx->nmvc;
       mv[0].as_int = near_mv[0].as_int;
       read_mv(r, &mv[1].as_mv, &ref_mv[1].as_mv, nmvc, allow_hp);
+#if CONFIG_INSPECTION
+      // videoparser: Store MVD for ref 1 (NEWMV), zero for ref 0 (NEARMV)
+      mbmi->mvd[0].as_int = 0;
+      mbmi->mvd[1].as_mv.row = mv[1].as_mv.row - ref_mv[1].as_mv.row;
+      mbmi->mvd[1].as_mv.col = mv[1].as_mv.col - ref_mv[1].as_mv.col;
+#endif
       assert(is_compound);
       break;
     }
     case NEW_NEARMV: {
       nmv_context *const nmvc = &ec_ctx->nmvc;
       read_mv(r, &mv[0].as_mv, &ref_mv[0].as_mv, nmvc, allow_hp);
+#if CONFIG_INSPECTION
+      // videoparser: Store MVD for ref 0 (NEWMV), zero for ref 1 (NEARMV)
+      mbmi->mvd[0].as_mv.row = mv[0].as_mv.row - ref_mv[0].as_mv.row;
+      mbmi->mvd[0].as_mv.col = mv[0].as_mv.col - ref_mv[0].as_mv.col;
+      mbmi->mvd[1].as_int = 0;
+#endif
       assert(is_compound);
       mv[1].as_int = near_mv[1].as_int;
       break;
@@ -1206,9 +1268,19 @@ static inline int assign_mv(AV1_COMMON *cm, MACROBLOCKD *xd,
                                           bsize, xd->mi_col, xd->mi_row,
                                           features->cur_frame_force_integer_mv)
                          .as_int;
+#if CONFIG_INSPECTION
+      // videoparser: No MVD for GLOBAL_GLOBALMV
+      mbmi->mvd[0].as_int = 0;
+      mbmi->mvd[1].as_int = 0;
+#endif
       break;
     }
     default: {
+#if CONFIG_INSPECTION
+      // videoparser: Zero MVD for unknown modes
+      mbmi->mvd[0].as_int = 0;
+      mbmi->mvd[1].as_int = 0;
+#endif
       return 0;
     }
   }
@@ -1375,9 +1447,17 @@ static void read_inter_block_mode_info(AV1Decoder *const pbi,
 
   if (mbmi->skip_mode) assert(mbmi->mode == NEAREST_NEARESTMV);
 
+#if CONFIG_INSPECTION
+  // videoparser: Track bits before motion vector decoding
+  const uint32_t mv_bits_before = aom_reader_tell_frac(r);
+#endif
   const int mv_corrupted_flag =
       !assign_mv(cm, xd, mbmi->mode, mbmi->ref_frame, mbmi->mv, ref_mv,
                  nearestmv, nearmv, is_compound, allow_hp, r);
+#if CONFIG_INSPECTION
+  // videoparser: Accumulate motion bits (in 1/8th bits, convert to bits)
+  pbi->motion_bits += (aom_reader_tell_frac(r) - mv_bits_before);
+#endif
   aom_merge_corrupted_flag(&dcb->corrupted, mv_corrupted_flag);
 
   mbmi->use_wedge_interintra = 0;
